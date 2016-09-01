@@ -17,7 +17,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import com.yh.call.database.DbHelper;
@@ -36,10 +35,11 @@ import java.util.Map;
  * version 0.3: 添加数据库，每次改动ListView均变化数据库，实现添加、删除功能
  *              问题：同样的数据会同时添加；一次只能删除一个数据，不能同时删除多个；activity间切换太慢
  * version 0.4: 解决了上一版本中的问题，重复数据不再重复添加，可以同时删除多人，改进了activity间的切换
+ * version 1.0: 实现了基本的功能，可以添加常用联系人，实现一键拨打电话
+ *              待添加：字号调整，一人多电话的情况
  */
 public class MainActivity extends AppCompatActivity {
 
-    private TextView showPhone;
     private ListView showMessageListView;
 
     private String name = "";
@@ -69,15 +69,15 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        //创建数据库
         //TopContacts.DeleteDatabase(this);
         dbHelper = new DbHelper(MainActivity.this,DbHelper.getName(),null,DbHelper.getVersion());
         dbHelper.getWritableDatabase();
         topContacts = new TopContacts(MainActivity.this);
 
-        showPhone = (TextView) findViewById(R.id.show_phone);
-
+        //操作ListView
         showMessageListView = (ListView) findViewById(R.id.show_message_listview);
-        listForListView = Action.showDatabase(topContacts,this,showMessageListView);
+        listForListView = Action.showDatabase(topContacts,this,showMessageListView);//显示数据库中的内容
         showMessageListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             /**
              * 给所选的目标拨打电话
@@ -111,7 +111,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onResume() {
+    protected void onResume() {//调用该方法时重新刷新ListView的内容
         super.onResume();
 
         String[] columns = {"name", "phone"};
@@ -149,18 +149,18 @@ public class MainActivity extends AppCompatActivity {
 
         //noinspection SimplifiableIfStatement
         switch (id){
-            case R.id.action_insert:
+            case R.id.action_insert://添加
                 Intent intent = new Intent();
                 intent.setAction(Intent.ACTION_PICK);
                 intent.setData(ContactsContract.Contacts.CONTENT_URI);
                 //startActivityForResult(intent,REQUEST_CONTACT);
-                startActivityForResult(intent, 1);
+                startActivityForResult(intent, 1);//打开电话本
                 break;
-            case R.id.action_delete:
+            case R.id.action_delete://删除
                 Intent intent_delete = new Intent(this,ListViewForDelete.class);
                 Bundle bundle = new Bundle();
                 bundle.putSerializable("db",topContacts);
-                intent_delete.putExtra("db",(Serializable) listForListView);
+                intent_delete.putExtra("db",(Serializable) listForListView);//将当前ListView传递出去
                 startActivity(intent_delete);
                 break;
             case R.id.action_settings:
