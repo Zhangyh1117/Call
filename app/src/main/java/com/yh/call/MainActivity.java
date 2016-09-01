@@ -35,6 +35,7 @@ import java.util.Map;
  * version 0.2: 将电话本中获得的信息用ListView显示出来；当点击ListView中的内容时，可以向选中的对象拨打电话。
  * version 0.3: 添加数据库，每次改动ListView均变化数据库，实现添加、删除功能
  *              问题：同样的数据会同时添加；一次只能删除一个数据，不能同时删除多个；activity间切换太慢
+ * version 0.4: 解决了上一版本中的问题，重复数据不再重复添加，可以同时删除多人，改进了activity间的切换
  */
 public class MainActivity extends AppCompatActivity {
 
@@ -43,8 +44,6 @@ public class MainActivity extends AppCompatActivity {
 
     private String name = "";
     private String phone = "";
-    private long[] pos;
-    private String[] strings;
     private List<Map<String, String>> listForListView = new ArrayList<Map<String, String>>();
     private DbHelper dbHelper;
 
@@ -112,6 +111,18 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+
+        String[] columns = {"name", "phone"};
+        String selection = null;
+        String[] selectionArgs = null;
+        String orderBy = "position";
+        List<Map<String, String>> initList = topContacts.listMaps(columns, selection, selectionArgs, orderBy);
+        Action.initListView(this,initList,showMessageListView,"name","phone");
+    }
+
+    @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
@@ -137,9 +148,6 @@ public class MainActivity extends AppCompatActivity {
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-        /*if (id == R.id.action_settings) {
-            return true;
-        }*/
         switch (id){
             case R.id.action_insert:
                 Intent intent = new Intent();
@@ -151,12 +159,9 @@ public class MainActivity extends AppCompatActivity {
             case R.id.action_delete:
                 Intent intent_delete = new Intent(this,ListViewForDelete.class);
                 Bundle bundle = new Bundle();
-                //bundle.putParcelable("db",topContacts);
                 bundle.putSerializable("db",topContacts);
-                //intent_delete.putExtras(bundle);
                 intent_delete.putExtra("db",(Serializable) listForListView);
                 startActivity(intent_delete);
-                finish();
                 break;
             case R.id.action_settings:
                 break;

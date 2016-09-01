@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
 import android.provider.Contacts;
+import android.util.Log;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
 import android.widget.Toast;
@@ -133,9 +134,15 @@ public class Action implements Serializable {
         //TopContacts topContacts = new TopContacts(MainActivity.this);
         Object[] params = {name,phone,showMessageListView.getCount()};
         //Object[] params = {"zhangsan","123456","3"};
-        boolean dbAddFlag = topContacts.add(params);
+        if (topContacts.view(new String[]{name}).isEmpty()) {//若返回值为空，表示在数据库中没有找到同名的项目，则添加到数据库中
+            boolean dbAddFlag = topContacts.add(params);
+            Log.d("Call", "dbAddFlag:" + dbAddFlag);
+        }
+        else {//否则提示该条目已存在
+            Toast.makeText(context, "此人已存在", Toast.LENGTH_SHORT).show();
+        }
         //Log.d("Call", "dbAddFlag:" + dbAddFlag);
-        List<Map<String,String>> list = topContacts.listMaps(null);
+        //List<Map<String,String>> list = topContacts.listMaps(null);
         //Log.d("Call", list.toString());
         String[] columns = {"name","phone"};
         //String[] columns = null;

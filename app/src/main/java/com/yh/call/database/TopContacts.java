@@ -94,12 +94,14 @@ public class TopContacts implements DatabaseService,Serializable{
     @Override
     public Map<String, String> view(String[] selectionArgs) {//查询符合要求的记录
         Map<String,String> map = new HashMap<String, String>();
+        int colums = 0;
         SQLiteDatabase sqLiteDatabase = null;
         try {
-            String sql = "select * from " + DbHelper.getNameOfDatabase() + " where position = ?";
+            //String sql = "select * from " + DbHelper.getNameOfDatabase() + " where position = ?";
+            String sql = "select * from " + DbHelper.getNameOfDatabase() + " where name = ?";
             sqLiteDatabase = dbHelper.getWritableDatabase();
             Cursor cursor = sqLiteDatabase.rawQuery(sql,selectionArgs);
-            int colums = cursor.getColumnCount();//获得数据库列的个数
+            colums = cursor.getColumnCount();//获得数据库列的个数
             while (cursor.moveToNext()){
                 for (int i = 0;i < colums;i++){
                     String colsName = cursor.getColumnName(i);
@@ -118,6 +120,9 @@ public class TopContacts implements DatabaseService,Serializable{
             }
         }
 
+        Log.d("Call", "map:" + map);
+        Log.d("Call", "colums:" + colums);
+        //Log.d("Call", "map.isEmpty():" + map.isEmpty());
         return map;
     }
 
@@ -142,7 +147,7 @@ public class TopContacts implements DatabaseService,Serializable{
                 }
                 list.add(map);
             }
-            Log.d("Call", "cursor.getCount():" + cursor.getCount());
+            //Log.d("Call", "cursor.getCount():" + cursor.getCount());
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
@@ -150,7 +155,7 @@ public class TopContacts implements DatabaseService,Serializable{
                 sqLiteDatabase.close();
             }
         }
-        Log.d("Call", list.toString());
+        //Log.d("Call", list.toString());
 
         return list;
     }

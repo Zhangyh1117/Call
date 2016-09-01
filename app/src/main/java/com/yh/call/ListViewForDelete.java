@@ -1,6 +1,5 @@
 package com.yh.call;
 
-import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -30,8 +29,7 @@ public class ListViewForDelete extends AppCompatActivity implements Serializable
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_delete);
 
-        //topContacts = (TopContacts)getIntent().getParcelableExtra("db") ;
-        listForListView = (ArrayList<Map<String,String>>) getIntent().getSerializableExtra("db") ;
+        listForListView = (ArrayList<Map<String,String>>) getIntent().getSerializableExtra("db") ;//从Intent中获取存储信息的List
         topContacts = MainActivity.getTopContacts();
         //Log.d("CallDelete", listForListView.toString());
 
@@ -40,42 +38,33 @@ public class ListViewForDelete extends AppCompatActivity implements Serializable
         cancelButton = (Button)findViewById(R.id.cancel_button) ;
 
         //Log.d("Call", "listView.getCount():" + showMessageListView.getCount());*/
-        Action.choiceListView(this,listForListView,showMessageListView,"name","phone");
+        Action.choiceListView(this,listForListView,showMessageListView,"name","phone");//将Intent中获取的list显示到当前的ListView中
 
         confirmButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                long[] pos = showMessageListView.getCheckItemIds();
+                long[] pos = showMessageListView.getCheckItemIds();//获取ListView中被选中的条目的ID
                 String[] strings = new String[pos.length];
-                Object[] params = new Object[pos.length];
                 //Log.d("Call", "checked items--->" + showMessageListView.getCheckedItemIds());
                 //Log.d("Call", pos.length + "");
                 for (int i = 0;i < pos.length;i++){
-                    Log.d("Call", "p:" + pos[i]);
+                    //Log.d("Call", "p:" + pos[i]);
                     strings[i] = String.valueOf(pos[i]);
-                    params[i] = strings[i];
+                    Object[] params = {strings[i]};
+                    topContacts.delete(params);//根据被选中的ID删除数据库中对应的条目
                 }
-                //topContacts.listMaps(null);
                 //Log.d("Call", "showMessageListView.getCount():" + showMessageListView.getCount());
-                topContacts.delete(params);
                 //Log.d("Call", "showMessageListView.getCount():" + showMessageListView.getCount());
-                Action.showDatabase(topContacts,ListViewForDelete.this,showMessageListView);
+                Action.showDatabase(topContacts,ListViewForDelete.this,showMessageListView);//用数据库中的数据更新当前ListView
                 //Log.d("Call", "showMessageListView.getCount():" + showMessageListView.getCount());
                 Log.d("Call", "Action.updatePosition(showMessageListView,topContacts):" +
-                        Action.updatePosition(showMessageListView, topContacts));
-                //topContacts.listMaps(null);
-                Intent intent = new Intent();
-                intent.setClass(ListViewForDelete.this,MainActivity.class);
-                startActivity(intent);
+                        Action.updatePosition(showMessageListView, topContacts));//用当前ListView中条目的ID更新数据库中对应的position值
                 finish();
             }
         });
         cancelButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Intent intent = new Intent();
-                intent.setClass(ListViewForDelete.this,MainActivity.class);
-                startActivity(intent);
                 finish();
             }
         });
