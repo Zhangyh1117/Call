@@ -3,10 +3,8 @@ package com.yh.call;
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
-import android.provider.Contacts;
 import android.provider.ContactsContract;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -18,30 +16,43 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
-import android.widget.Button;
 import android.widget.ListView;
-import android.widget.SimpleAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.yh.call.database.DbHelper;
+import com.yh.call.database.TopContacts;
+
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
  * Created by YH on 2016/8/29.
- * version 0.1:可以从电话本中获得信息。
- * version 0.2:将电话本中获得的信息用ListView显示出来；当点击ListView中的内容时，可以向选中的对象拨打电话。
+ * version 0.1: 可以从电话本中获得信息。
+ * version 0.2: 将电话本中获得的信息用ListView显示出来；当点击ListView中的内容时，可以向选中的对象拨打电话。
+ * version 0.3: 添加数据库，每次改动ListView均变化数据库，实现添加、删除功能
+ *              问题：同样的数据会同时添加；一次只能删除一个数据，不能同时删除多个；activity间切换太慢
  */
 public class MainActivity extends AppCompatActivity {
 
-    private Button queryButton;
     private TextView showPhone;
     private ListView showMessageListView;
 
-    String name = "";
-    String phone = "";
-    ArrayList<Map<String, String>> listForListView = new ArrayList<Map<String, String>>();
+    private String name = "";
+    private String phone = "";
+    private long[] pos;
+    private String[] strings;
+    private List<Map<String, String>> listForListView = new ArrayList<Map<String, String>>();
+    private DbHelper dbHelper;
+
+    public static TopContacts getTopContacts() {
+        return topContacts;
+    }
+
+    private static TopContacts topContacts;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,22 +70,15 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-
-        queryButton = (Button) findViewById(R.id.query_button);
-        queryButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent intent = new Intent();
-                intent.setAction(Intent.ACTION_PICK);
-                intent.setData(ContactsContract.Contacts.CONTENT_URI);
-                //startActivityForResult(intent,REQUEST_CONTACT);
-                startActivityForResult(intent, 1);
-            }
-        });
+        //TopContacts.DeleteDatabase(this);
+        dbHelper = new DbHelper(MainActivity.this,DbHelper.getName(),null,DbHelper.getVersion());
+        dbHelper.getWritableDatabase();
+        topContacts = new TopContacts(MainActivity.this);
 
         showPhone = (TextView) findViewById(R.id.show_phone);
 
         showMessageListView = (ListView) findViewById(R.id.show_message_listview);
+        listForListView = Action.showDatabase(topContacts,this,showMessageListView);
         showMessageListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             /**
              * 给所选的目标拨打电话
@@ -104,6 +108,7 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(intent);
             }
         });
+
     }
 
     @Override
@@ -112,68 +117,9 @@ public class MainActivity extends AppCompatActivity {
 
         switch (requestCode){
             case 1:
-                if (data == null){
-                    return;
-                }
-                Uri result = data.getData();
-                String contactId = result.getLastPathSegment();
-
-                //得到名称
-                String[] projection = new String[] {Contacts.People._ID, Contacts.People.NAME,
-                        Contacts.People.NUMBER};
-                Cursor cursor = null;          //order by
-                try {
-                    cursor = getContentResolver().query(Contacts.People.CONTENT_URI,
-                            projection,                     //select sentence
-                            Contacts.People._ID + " = ?",   //where sentence
-                            new String[]{contactId},        //where values
-                            Contacts.People.NAME);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    Toast.makeText(this, "请授予权限", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-
-                if (cursor.moveToFirst()){
-                    name = cursor.getString(cursor.getColumnIndex(Contacts.People.NAME));
-                }
-
-                //得到电话
-                projection = new String[] {Contacts.Phones.PERSON_ID,Contacts.Phones.NUMBER};
-                cursor = getContentResolver().query(Contacts.Phones.CONTENT_URI,
-                        projection,                         //select sentence
-                        Contacts.Phones.PERSON_ID + " = ?", //where sentence
-                        new String[] {contactId},           //where values
-                        Contacts.Phones.NAME);              //order by
-
-                if (cursor.moveToFirst()){
-                    phone = cursor.getString(cursor.getColumnIndex(Contacts.Phones.NUMBER));
-                }
-
-                //显示
-                showPhone.setText(name + ":" + phone);
-                showMessageOnListView(showMessageListView,"name",name,"phone",phone);
+                listForListView = Action.openContacts(data,this,name,phone,showMessageListView,topContacts);
                 break;
         }
-    }
-
-    /**
-     * 将特定内容加入到ListView中，并显示出来
-     * @param listView:要显示的ListView
-     * @param titleKey:标题的键，此处标题为姓名
-     * @param titleValue:标题的值
-     * @param contentKey:内容的键，此处内容为电话号码
-     * @param contentValue:内容的值
-     */
-    public void showMessageOnListView(ListView listView,String titleKey,String titleValue,
-                                      String contentKey,String contentValue){
-        HashMap<String,String> map = new HashMap<String, String>();
-        map.put(titleKey,titleValue);
-        map.put(contentKey,contentValue);
-        listForListView.add(map);
-        SimpleAdapter adapter = new SimpleAdapter(this,listForListView,android.R.layout.simple_list_item_2,
-                new String[]{titleKey,contentKey},new int[] {android.R.id.text1,android.R.id.text2});
-        listView.setAdapter(adapter);
     }
 
     @Override
@@ -191,10 +137,50 @@ public class MainActivity extends AppCompatActivity {
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
+        /*if (id == R.id.action_settings) {
             return true;
+        }*/
+        switch (id){
+            case R.id.action_insert:
+                Intent intent = new Intent();
+                intent.setAction(Intent.ACTION_PICK);
+                intent.setData(ContactsContract.Contacts.CONTENT_URI);
+                //startActivityForResult(intent,REQUEST_CONTACT);
+                startActivityForResult(intent, 1);
+                break;
+            case R.id.action_delete:
+                Intent intent_delete = new Intent(this,ListViewForDelete.class);
+                Bundle bundle = new Bundle();
+                //bundle.putParcelable("db",topContacts);
+                bundle.putSerializable("db",topContacts);
+                //intent_delete.putExtras(bundle);
+                intent_delete.putExtra("db",(Serializable) listForListView);
+                startActivity(intent_delete);
+                finish();
+                break;
+            case R.id.action_settings:
+                break;
+            default:
+                Toast.makeText(this, "no this key", Toast.LENGTH_SHORT).show();
+                break;
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
     }
 }
